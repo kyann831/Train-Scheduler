@@ -12,13 +12,14 @@ $(document).ready(function () {
 firebase.initializeApp(config);
 
 var database = firebase.database();
-
+//data variables declared
 var train = "";
 var destination = "";
 var frequency = 0;
-var firstTrain = "";
+var nextArrival = "";
+var minsAway = 0;
 
-
+//on-click train captures form inputs
 $("#add-train-btn").on("click", function(event) {
 
     event.preventDefault();
@@ -26,20 +27,18 @@ $("#add-train-btn").on("click", function(event) {
     train = $("#add-train-input").val().trim();
     destination = $("#add-destination-input").val().trim();
     frequency = $("#add-train-frequency-input").val().trim();
-    firstTrain = $("#add-firsttrain-input").val().trim();
+    nextArrival = $("#add-firsttrain-input").val().trim();
 
 
     
    
-  
+  //Push to populate database
     database.ref().push({
       train: train,
       destination: destination,      
       frequency: frequency,
-      firstTrain: firstTrain,
-      nextTrain: nextTrain,
-
-      
+      nextArrival: nextArrival,
+      minsAway: minsAway
     });
 
 })
@@ -48,51 +47,38 @@ $("#add-train-btn").on("click", function(event) {
 
 
 database.ref().on("child_added", function(snapshot) {
-
+    //Print the initial data to the console
     var sv = snapshot.val();
 
-    console.log(sv.train);
-    console.log(sv.destination);
-    console.log(sv.frequency);
-    console.log(sv.firstTrain);
+    var freq = parseInt(sv.frequency)
+        // moment function added to calculate mins away
+    var dConverted = moment(snapshot.val().nextArrival, 'HH:mm').subtract(1, 'years');
+    var trainTime = moment(dConverted).format('HH:mm');
+    var timeConverted = moment(trainTime, 'HH:mm').subtract(1, 'years');
+    var timeDifference = moment().diff(moment(timeConverted), 'minutes');
+    var timeRemainder = timeDifference % freq;
+    var minsAway = freq - timeRemainder;
+     nextArrival = moment().add(minsAway, 'minutes');
+        
+     //appending new row/info to html
+    var newRow = $("<tr>").append(
+        $("<th>").text(sv.train),
+        $("<th>").text(sv.destination),
+        $("<th>").text(sv.frequency),
+        $("<th>").text(moment(sv.nextArrival, 'HH:mm').format('hh:mm a')),
+        $("<th>").text(minsAway),
+    );
 
-  var firstTrainConverted = moment(firstTrain, "HH:mm").subtract(1, "years"); 
-  console.log(firstTrainConverted);
+    $("#train-table > tbody").append(newRow);
 
-  var currentTime = moment();
-  console.log("CURRENT TIME: " + moment(currentTime).format("hh:mm"));
+})
 
-  var diffTime = moment().diff(moment(firstTrainConverted), "minutes");
-  console.log("DIFFERENCE IN TIME: " + diffTime);
-
-  var tRemainder = diffTime % frequency;
-  console.log(tRemainder);
-
-  var tMinutesTillTrain = frequency - tRemainder;
-  console.log("MINUTES TILL TRAIN: " + tMinutesTillTrain);
-
-  var nextTrain = moment().add(tMinutesTillTrain, "minutes");
-  console.log("ARRIVAL TIME: " + moment(nextTrain).format("hh:mm"));
-
-    let tBody = $("<tbody>");
-    let tRow = $("<tr>");
-
-    let trainID = $("<td>").text(sv.train);
-    let destinationID = $("<td>").text(sv.destination);
-    let frequencyID = $("<td>").text(sv.frequency);
-    let firstTrainID = $("<td>").text(sv.firstTrain);
-    let nextTrainID = $("<td>").text(sv.nextTrain);
-
-    tRow.append(trainID, destinationID,frequencyID, firstTrainID, nextTrainID);
-
-    tBody.append(tRow);
-    $(".table").append(tRow);
 
   }, function(errorObject) {
     console.log("The read failed: " + errorObject.code);
     });
 
-});
+
 
 
 
